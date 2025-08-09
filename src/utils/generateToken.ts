@@ -2,8 +2,8 @@ import jwt from 'jsonwebtoken'
 
 export interface IPayload {
   _id: string
-  email: string
   role: string
+  jti?: string
 }
 
 export const generateToken = async (payload: IPayload, secretKey: string, expiresIn?: string) => {

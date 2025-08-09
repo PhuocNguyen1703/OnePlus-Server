@@ -1,16 +1,16 @@
 import { Request, Response } from 'express'
-import { StatusCodes } from 'http-status-codes'
 import envConfig from '~/config/envConfig'
-import { sendResetPasswordEmail, sendVerificationEmail } from '~/email'
+import { sendResetPasswordEmail } from '~/email'
 import { authModel } from '~/models/auth.model'
 import { ForgotPasswordBodyType, LoginBodyType, RegisterBodyType } from '~/types/auth.type'
 import { comparePassword, hashPassword } from '~/utils/crypto'
-import { EntityError, ForbiddenError, NotfoundError } from '~/utils/errors'
+import { AuthError, EntityError, ForbiddenError, NotfoundError } from '~/utils/errors'
 import { generateToken, IPayload } from '~/utils/generateToken'
 import crypto from 'crypto'
 import { ObjectId } from 'mongodb'
-
-let refreshTokens: string[] = []
+import { redisService } from './redis.service'
+import { v4 as uuidv4 } from 'uuid'
+import jwt from 'jsonwebtoken'
 
 const register = async (body: RegisterBodyType) => {
   const { email, password } = body
@@ -42,16 +42,14 @@ const register = async (body: RegisterBodyType) => {
   }
 }
 
-const login = async (body: LoginBodyType, res: Response) => {
+const login = async (body: LoginBodyType) => {
   const { email } = body
 
   try {
     const user = await authModel.findOne({ email })
 
-    if (!user) throw new EntityError([{ field: 'email', message: 'Incorrect email or password.' }])
-
-    if (!body.password || !user.password)
-      throw new EntityError([{ field: 'password', message: 'Incorrect email or password.' }])
+    if (!user || !body.password || !user.password)
+      throw new EntityError([{ field: 'unknown', message: 'Incorrect email or password.' }])
 
     const validPassword = comparePassword(body.password, user.password)
     if (!validPassword) throw new EntityError([{ field: 'password', message: 'Incorrect email or password.' }])
@@ -66,32 +64,43 @@ const login = async (body: LoginBodyType, res: Response) => {
         const verification_code_exp = Date.now() + 10 * 60 * 1000
         const setFields = { verification_code, verification_code_exp }
 
-        await authModel.updateDocumentFields({ _id }, setFields)
+        // await authModel.updateDocumentFields({ _id }, setFields)
         // await sendVerificationEmail(email, verification_code)
-        return { data: { _id }, message: 'Account is not verified.' }
+        const user = { _id, isActive }
+        return { data: { user }, message: 'Account is not verified.' }
       }
 
-      const payload: IPayload = {
+      const tokenPayload: IPayload = {
         _id: _id.toString(),
-        email,
         role
       }
 
-      const accessToken = await generateToken(payload, envConfig.JWT_SECRET_KEY_ACCESS, '10s')
-      const refreshToken = await generateToken(payload, envConfig.JWT_SECRET_KEY_REFRESH, '365d')
-      refreshTokens.push(refreshToken)
+      const accessToken = await generateToken(
+        tokenPayload,
+        envConfig.ACCESS_TOKEN_SECRET_KEY,
+        envConfig.ACCESS_TOKEN_EXP
+      )
+      const refreshToken = await generateToken(
+        tokenPayload,
+        envConfig.REFRESH_TOKEN_SECRET_KEY,
+        envConfig.REFRESH_TOKEN_EXP
+      )
 
-      res.cookie('refreshToken', refreshToken, {
-        httpOnly: true,
-        secure: false,
-        path: '/',
-        sameSite: 'none'
-      })
+      const tokens = {
+        accessToken,
+        refreshToken
+      }
 
-      user.accessToken = accessToken
+      // res.cookie('token', accessToken, {
+      //   httpOnly: true,
+      //   secure: false,
+      //   path: '/'
+      // })
+
+      await redisService.setRefreshToken(_id.toString(), refreshToken, 10 * 60 * 1000)
       delete user.password
 
-      return { data: { ...user }, message: 'Login successfully.' }
+      return { data: { user, tokens }, message: 'Login successfully.' }
     }
   } catch (error) {
     throw error as Error
@@ -174,14 +183,57 @@ const resetPassword = async (req: Request) => {
   }
 }
 
-const logout = async (req: Request, res: Response) => {
+interface IDecodedToken extends jwt.JwtPayload {
+  _id: string
+  role: string
+}
+
+const refreshToken = async (refreshToken: string) => {
+  if (!refreshToken) throw new AuthError('You are not authenticated.')
+
   try {
-    refreshTokens = refreshTokens.filter((token) => token !== req?.cookies?.refreshToken)
-    res.clearCookie('refreshToken')
-    res.status(StatusCodes.OK).json('Logged out successfully.')
+    const decodedToken = jwt.verify(refreshToken, envConfig.REFRESH_TOKEN_SECRET_KEY) as IDecodedToken
+
+    const tokenPayload: IPayload = {
+      _id: decodedToken._id,
+      role: decodedToken.role
+    }
+
+    const newAccessToken = await generateToken(
+      tokenPayload,
+      envConfig.ACCESS_TOKEN_SECRET_KEY,
+      envConfig.ACCESS_TOKEN_EXP
+    )
+    const newRefreshToken = await generateToken(
+      tokenPayload,
+      envConfig.REFRESH_TOKEN_SECRET_KEY,
+      envConfig.REFRESH_TOKEN_EXP
+    )
+
+    return { data: { newAccessToken, newRefreshToken }, message: 'Refresh token successfully.' }
   } catch (error) {
     throw error as Error
   }
 }
 
-export const authService = { register, login, verifyEmail, forgotPassword, resetPassword, logout }
+const logout = async (req: Request) => {
+  const userId = req?.userId as string
+  const refreshTokenFromCookie = req.headers?.cookie as string
+
+  try {
+    const refreshTokenFromRedis = await redisService.getRefreshToken(userId)
+    console.log('redis:::::', refreshTokenFromRedis)
+    console.log('cookie:::::', req.headers.cookie)
+
+    if (refreshTokenFromCookie != refreshTokenFromRedis)
+      throw new ForbiddenError('You are not authorized to perform this action.')
+
+    await redisService.deleteRefreshToken(userId)
+
+    return { message: 'Logged out successfully.' }
+  } catch (error) {
+    throw error as Error
+  }
+}
+
+export const authService = { register, login, verifyEmail, forgotPassword, resetPassword, refreshToken, logout }

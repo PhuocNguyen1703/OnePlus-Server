@@ -2,7 +2,7 @@ import { StatusCodes } from 'http-status-codes'
 
 export class EntityError extends Error {
   fields: { message: string; field: string }[]
-  status = StatusCodes.UNPROCESSABLE_ENTITY
+  status: number = StatusCodes.UNPROCESSABLE_ENTITY
   constructor(fields: { message: string; field: string }[]) {
     super(`Request can't be processed because of invalid data`)
     this.fields = fields
@@ -10,7 +10,7 @@ export class EntityError extends Error {
 }
 
 export class NotfoundError extends Error {
-  status = StatusCodes.NOT_FOUND
+  status: number = StatusCodes.NOT_FOUND
   message: string
   constructor(message: string) {
     super(message)
@@ -19,7 +19,7 @@ export class NotfoundError extends Error {
 }
 
 export class AuthError extends Error {
-  status = StatusCodes.UNAUTHORIZED
+  status: number = StatusCodes.UNAUTHORIZED
   message: string
   constructor(message: string) {
     super(message)
@@ -28,7 +28,7 @@ export class AuthError extends Error {
 }
 
 export class ForbiddenError extends Error {
-  status = StatusCodes.FORBIDDEN
+  status: number = StatusCodes.FORBIDDEN
   message: string
   constructor(message: string) {
     super(message)

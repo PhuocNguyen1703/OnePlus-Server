@@ -8,7 +8,8 @@ const router = express.Router()
 
 router.post('/register', validateData(RegisterBody), authController.register)
 router.post('/login', validateData(LoginBody), authController.login)
-router.post('/logout', authMiddleware.verifyToken, authController.logout)
+router.post('/logout', authMiddleware.verifyTokenCookie, authController.logout)
+router.post('/refresh-token', authController.refreshToken)
 
 router.post('/verify-email/:id', validateData(OTPBody), authController.verifyEmail)
 router.post('/forgot-password', validateData(ForgotPasswordBody), authController.forgotPassword)

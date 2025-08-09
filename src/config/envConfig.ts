@@ -16,10 +16,15 @@ const checkEnvFile = async () => {
 checkEnvFile()
 
 const configSchema = z.object({
+  NODE_ENV: z.string(),
   PORT: z.coerce.number().default(5000),
+  CLIENT_URL: z.string(),
   MONGO_DB: z.string(),
-  JWT_SECRET_KEY_ACCESS: z.string(),
-  JWT_SECRET_KEY_REFRESH: z.string(),
+  REDIS_PW: z.string(),
+  ACCESS_TOKEN_SECRET_KEY: z.string(),
+  REFRESH_TOKEN_SECRET_KEY: z.string(),
+  ACCESS_TOKEN_EXP: z.string(),
+  REFRESH_TOKEN_EXP: z.string(),
   RESEND_API_KEY: z.string(),
   LOGO_URL: z.string()
 })
