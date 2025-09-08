@@ -1,21 +1,24 @@
 import { ZodError } from 'zod'
 import { getDB } from '~/config/mongodb'
-import { AccountType, RegisterBodyType } from '../types/auth.type'
-import { accountSchema } from '~/schemas/account.schema'
+import { userSchema, UserType } from '~/schemas/account.schema'
+import { RegisterType } from '~/schemas/auth.schema'
+import { USER_COLLECTION } from '~/services/auth.service'
 
-const userCollectionName: string = 'users'
-
-const validateSchema = async (data: RegisterBodyType) => {
+const validateSchema = async (data: RegisterType) => {
   try {
-    return accountSchema.parse(data)
+    return userSchema.parse(data)
   } catch (error) {
     throw error as ZodError
   }
 }
 
-const findOne = async (filter: Partial<AccountType> | { [key: string]: unknown }) => {
+const findOne = async (
+  filter: { [key: string]: unknown },
+  collectionName: string,
+  option?: { [key: string]: unknown }
+) => {
   try {
-    const result = await getDB().collection(userCollectionName).findOne(filter)
+    const result = await getDB().collection(collectionName).findOne(filter, option)
 
     return result
   } catch (error) {
@@ -23,9 +26,13 @@ const findOne = async (filter: Partial<AccountType> | { [key: string]: unknown }
   }
 }
 
-const insertOne = async (registerData: Partial<AccountType>) => {
+const insertOne = async (
+  registerData: Partial<UserType>,
+  collectionName: string,
+  option?: { [key: string]: unknown }
+) => {
   try {
-    const result = await getDB().collection(userCollectionName).insertOne(registerData)
+    const result = await getDB().collection(collectionName).insertOne(registerData, option)
 
     return result
   } catch (error) {
@@ -34,14 +41,14 @@ const insertOne = async (registerData: Partial<AccountType>) => {
 }
 
 const updateDocumentFields = async (
-  filterQuery: Partial<AccountType>,
-  setData?: Partial<AccountType>,
+  filterQuery: Partial<UserType>,
+  setFields?: Partial<UserType>,
   unsetFields?: string[]
 ) => {
-  const updateOperations: { [key: string]: Partial<AccountType> | string[] } = {}
+  const updateOperations: { [key: string]: Partial<UserType> | string[] } = {}
 
-  if (setData && Object.keys(setData).length > 0) {
-    updateOperations.$set = setData
+  if (setFields && Object.keys(setFields).length > 0) {
+    updateOperations.$set = setFields
   }
 
   if (unsetFields && unsetFields.length > 0) {
@@ -57,7 +64,7 @@ const updateDocumentFields = async (
   if (Object.keys(updateOperations).length === 0) return null
 
   try {
-    const result = await getDB().collection(userCollectionName).updateMany(filterQuery, updateOperations)
+    const result = await getDB().collection(USER_COLLECTION).updateMany(filterQuery, updateOperations)
 
     return result
   } catch (error) {

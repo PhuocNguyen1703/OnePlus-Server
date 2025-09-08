@@ -1,30 +1,32 @@
+import { ObjectId } from 'mongodb'
 import { z } from 'zod'
-import { GENDER, ROLE } from '~/constants'
 
-export const accountSchema = z.object({
-  email: z.string().trim().email(),
-  password: z.string().trim().min(8),
-  first_name: z.string().trim().min(2).max(256),
-  last_name: z.string().trim().min(2).max(256),
-  role: z.enum(ROLE),
-  avatar: z.string().nullable().default(null),
-  birth: z.date().nullable().default(null),
-  gender: z.enum(GENDER).nullable().default(null),
-  phone: z.number().nullable().default(null),
-  address: z
+export const userRoleEnum = z.enum(['admin', 'teacher', 'student', 'staff', 'guardian'])
+
+export const userSchema = z.object({
+  userName: z.string().min(8).max(20).trim(),
+  password: z.string().min(8).trim(),
+  role: userRoleEnum,
+  isActive: z.boolean().prefault(false),
+  verification: z
     .object({
-      add1: z.string().min(2).max(256),
-      add2: z.string().min(2).max(256)
+      code: z.string().optional(),
+      exp: z.date().optional()
     })
-    .nullable()
-    .default(null),
-  isActive: z.boolean().default(false),
-  verification_code: z.string().optional(),
-  verification_code_exp: z.number().optional(),
-  reset_password_token: z.string().optional(),
-  reset_password_token_exp: z.number().optional(),
-  last_login: z.number().nullable().default(null),
-  createdAt: z.number().default(Date.now()),
-  updatedAt: z.number().nullable().default(null),
-  _isDeleted: z.boolean().default(false)
+    .optional(),
+  reset: z
+    .object({
+      token: z.string().optional(),
+      exp: z.date().optional()
+    })
+    .optional(),
+  lastLogin: z.date().nullable().prefault(null),
+  createdAt: z.date(),
+  updatedAt: z.date().nullable().prefault(null),
+  _isDeleted: z.boolean().prefault(false)
 })
+
+export type UserType = z.TypeOf<typeof userSchema> & {
+  _id: ObjectId
+  userId: ObjectId
+}

@@ -7,7 +7,7 @@ import cookieParser from 'cookie-parser'
 import { connectRedisClient } from './config/redis'
 
 connectDB()
-  .then(() => console.log('Connected successfully to mongoDB'))
+  .then(() => console.log('Connected successfully to MongoDB'))
   .then(async () => {
     await connectRedisClient()
     startServer()
@@ -31,7 +31,7 @@ const startServer = () => {
   app.use(express.urlencoded({ extended: true }))
 
   //Routes
-  app.use('/api/auth', authRoute)
+  app.use('/v1/api/auth', authRoute)
 
   app.listen(envConfig.PORT || 5000, () => {
     console.log(`Server is running at port ${envConfig.PORT}`)

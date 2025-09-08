@@ -17,7 +17,7 @@ checkEnvFile()
 
 const configSchema = z.object({
   NODE_ENV: z.string(),
-  PORT: z.coerce.number().default(5000),
+  PORT: z.coerce.number().prefault(5000),
   CLIENT_URL: z.string(),
   MONGO_DB: z.string(),
   REDIS_PW: z.string(),
