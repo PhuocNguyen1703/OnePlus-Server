@@ -12,9 +12,9 @@ export const validateData = <T extends ZodRawShape>(schema: z.ZodObject<T>) => {
         const errorMessages = error.issues.map((issue: z.core.$ZodIssue) => ({
           message: `${issue.path.join('.')} is ${issue.message}`
         }))
-        res.status(StatusCodes.BAD_REQUEST).json({ error: 'Invalid data', details: errorMessages })
+        res.status(StatusCodes.BAD_REQUEST).json({ success: false, message: 'Validation error', errors: errorMessages })
       } else {
-        res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: 'Internal Server Error' })
+        res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ success: false, message: 'Internal Server Error' })
       }
     }
   }

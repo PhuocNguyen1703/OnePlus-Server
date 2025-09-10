@@ -4,7 +4,7 @@ import { z } from 'zod'
 export const userRoleEnum = z.enum(['admin', 'teacher', 'student', 'staff', 'guardian'])
 
 export const userSchema = z.object({
-  userName: z.string().min(8).max(20).trim(),
+  username: z.string().min(8).max(20).trim(),
   password: z.string().min(8).trim(),
   role: userRoleEnum,
   isActive: z.boolean().prefault(false),

@@ -2,45 +2,39 @@ import { StatusCodes } from 'http-status-codes'
 
 export class EntityError extends Error {
   fields: { message: string; field: string }[]
-  status: number = StatusCodes.UNPROCESSABLE_ENTITY
+  statusCode: number = StatusCodes.UNPROCESSABLE_ENTITY
   constructor(fields: { message: string; field: string }[]) {
-    super(`Request can't be processed because of invalid data`)
+    super(`Request can't be processed because of invalid data.`)
     this.fields = fields
   }
 }
 
 export class NotfoundError extends Error {
-  status: number = StatusCodes.NOT_FOUND
-  message: string
+  statusCode: number = StatusCodes.NOT_FOUND
   constructor(message: string) {
     super(message)
-    this.message = message
   }
 }
 
 export class AuthError extends Error {
-  status: number = StatusCodes.UNAUTHORIZED
-  message: string
+  statusCode: number = StatusCodes.UNAUTHORIZED
   constructor(message: string) {
     super(message)
-    this.message = message
   }
 }
 
 export class ForbiddenError extends Error {
-  status: number = StatusCodes.FORBIDDEN
-  message: string
+  statusCode: number = StatusCodes.FORBIDDEN
   constructor(message: string) {
     super(message)
-    this.message = message
   }
 }
 
 export class CustomError extends Error {
-  status: number
-  constructor({ message, status }: { message: string; status: number }) {
+  statusCode: number
+  constructor(message: string, statusCode: number) {
     super(message)
-    this.status = status
+    this.statusCode = statusCode
   }
 }
 

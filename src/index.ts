@@ -5,6 +5,7 @@ import authRoute from '~/routers/auth/auth.route'
 import cors from 'cors'
 import cookieParser from 'cookie-parser'
 import { connectRedisClient } from './config/redis'
+import { errorHandler } from './middlewares/errorHandler'
 
 connectDB()
   .then(() => console.log('Connected successfully to MongoDB'))
@@ -30,8 +31,9 @@ const startServer = () => {
   app.use(cookieParser())
   app.use(express.urlencoded({ extended: true }))
 
-  //Routes
-  app.use('/v1/api/auth', authRoute)
+  app.use('/api/v1/auth', authRoute)
+
+  app.use(errorHandler)
 
   app.listen(envConfig.PORT || 5000, () => {
     console.log(`Server is running at port ${envConfig.PORT}`)

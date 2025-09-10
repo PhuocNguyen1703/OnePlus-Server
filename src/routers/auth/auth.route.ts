@@ -1,7 +1,7 @@
 import express from 'express'
 import { authController } from '~/controllers/auth.controller'
-import { validateData } from '~/middleware/validation'
-import { authMiddleware } from '~/middleware/verifyToken'
+import { validateData } from '~/middlewares/validation'
+import { authMiddleware } from '~/middlewares/verifyToken'
 import {
   forgotPasswordSchema,
   loginSchema,
@@ -17,7 +17,7 @@ router.post('/login', validateData(loginSchema), authController.login)
 router.post('/logout', authMiddleware.verifyTokenCookie, authController.logout)
 router.post('/refresh-token', authController.refreshToken)
 
-router.post('/verify-email/:id', validateData(OTPSchema), authController.verifyEmail)
+router.post('/verify-account/:id', validateData(OTPSchema), authController.verifyAccount)
 router.post('/forgot-password', validateData(forgotPasswordSchema), authController.forgotPassword)
 router.post('/reset-password/:token', validateData(resetPasswordSchema), authController.resetPassword)
 

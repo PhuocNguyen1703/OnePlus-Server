@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { userRoleEnum } from '~/schemas/account.schema'
 
 export const registerSchema = z.strictObject({
-  userName: z.string().min(8).trim(),
+  username: z.string().min(8).trim(),
   password: z.string().min(8).max(20).trim(),
   role: userRoleEnum
 })
@@ -12,12 +12,12 @@ export const OTPSchema = z.strictObject({
 })
 
 export const loginSchema = z.strictObject({
-  userName: z.string().min(8).trim(),
+  username: z.string().min(8).trim(),
   password: z.string().min(8).max(20).trim()
 })
 
 export const forgotPasswordSchema = z.strictObject({
-  userName: z.string().min(8).trim()
+  username: z.string().min(8).trim()
 })
 
 export const resetPasswordSchema = z.strictObject({
