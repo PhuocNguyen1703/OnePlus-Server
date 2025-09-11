@@ -1,6 +1,5 @@
 import { Request } from 'express'
 import envConfig from '~/config/envConfig'
-import { authModel } from '~/models/auth.model'
 import { comparePassword, hashPassword } from '~/utils/crypto'
 import { AuthError, EntityError, ForbiddenError, NotfoundError } from '~/utils/errors'
 import { generateToken, IPayload } from '~/utils/generateToken'
@@ -9,62 +8,32 @@ import { ObjectId } from 'mongodb'
 import { redisService } from './redis.service'
 import { v4 as uuidv4 } from 'uuid'
 import jwt from 'jsonwebtoken'
-import { client } from '~/config/mongodb'
-import { ZodObject, ZodRawShape } from 'zod'
 import { ForgotPasswordType, LoginType, RegisterType } from '~/schemas/auth.schema'
-import { staffSchema, studentSchema, teacherSchema } from '~/schemas/profile.schema'
 import { ApiResponse } from '~/utils/apiResponse'
-
-export const USER_COLLECTION: string = 'users'
-const PROFILE_COLLECTION: string = 'profiles'
+import { accountModel } from '~/models/account.model'
+import { AccountType } from '~/schemas/account.schema'
 
 const register = async (body: RegisterType) => {
-  const { username, password, role } = body
+  const { username, password } = body
   const hashedPassword = hashPassword(password)
   const transformData = { ...body, password: hashedPassword, createdAt: new Date() }
 
-  const session = client.startSession()
-  try {
-    session.startTransaction()
+  const existUser = await accountModel.findAccount({ username })
+  if (existUser) throw new EntityError([{ field: 'username', message: 'Account already exists.' }])
+  const validatedData = await accountModel.validateSchema(transformData)
 
-    const existUser = await authModel.findOne({ username }, USER_COLLECTION)
-    if (existUser) throw new EntityError([{ field: 'username', message: 'Account already exists.' }])
+  if (!validatedData) throw new EntityError([{ field: 'validate model', message: 'Validated data is invalid.' }])
 
-    const validatedData = await authModel.validateSchema(transformData)
-    if (!validatedData) throw new EntityError([{ field: 'validate model', message: 'Validated data is invalid.' }])
+  const newUser = await accountModel.insertAccount(validatedData as AccountType)
 
-    const newUser = await authModel.insertOne(validatedData, USER_COLLECTION, { session })
+  if (!newUser) throw new Error('Database insert failed')
 
-    if (!newUser) throw new Error('Database insert failed')
-
-    const newUserId: ObjectId = newUser.insertedId
-
-    const roleSchemaMap: Record<string, ZodObject<ZodRawShape>> = {
-      student: studentSchema,
-      teacher: teacherSchema
-    }
-    const specificSchema: ZodObject<ZodRawShape> = roleSchemaMap[role] || staffSchema
-    const specificDoc = specificSchema.parse({ userId: newUserId.toString(), createdAt: validatedData.createdAt })
-
-    await authModel.insertOne(specificDoc, PROFILE_COLLECTION, { session })
-    // const createdUser = await authModel.findOne({ _id: newUserId }, USER_COLLECTION, { session })
-
-    // if (!createdUser) throw new Error('Failed to retrieve new user after registration.')
-
-    await session.commitTransaction()
-
-    return new ApiResponse(true, 'Account register successfully.')
-  } catch (error) {
-    await session.abortTransaction()
-    throw error as Error
-  } finally {
-    session.endSession()
-  }
+  return new ApiResponse(true, 'Account register successfully.')
 }
 
 const login = async (body: LoginType) => {
   const { username } = body
-  const user = await authModel.findOne({ username }, USER_COLLECTION)
+  const user = await accountModel.findAccount({ username })
 
   if (!user || !body.password || !user.password)
     throw new EntityError([{ field: 'username', message: 'Incorrect username or password.' }])
@@ -82,7 +51,7 @@ const login = async (body: LoginType) => {
       const codeExp = Date.now() + 10 * 60 * 1000
       const verification = { code, exp: new Date(codeExp) }
 
-      await authModel.updateDocumentFields({ _id }, { verification })
+      await accountModel.updateAccount({ _id }, { verification })
       // await sendVerificationEmail(email, verification_code)
 
       return new ApiResponse(true, 'Account is not verified.', { _id })
@@ -101,9 +70,10 @@ const login = async (body: LoginType) => {
     )
 
     // await redisService.setRefreshToken(_id.toString(), refreshToken, 10 * 60 * 1000)
-    await authModel.updateDocumentFields({ _id }, { lastLogin: new Date() })
+    await accountModel.updateAccount({ _id }, { lastLogin: new Date() })
 
-    return new ApiResponse(true, 'Login successfully.', { _id, accessToken, refreshToken })
+    delete user.password
+    return new ApiResponse(true, 'Login successfully.', { ...user, accessToken, refreshToken })
   }
 }
 
@@ -111,21 +81,18 @@ const verifyAccount = async (req: Request) => {
   const { id } = req.params
   const { code } = req.body
 
-  const user = await authModel.findOne(
-    {
-      _id: new ObjectId(id),
-      'verification.code': code,
-      'verification.exp': { $gt: new Date() }
-    },
-    USER_COLLECTION
-  )
+  const user = await accountModel.findAccount({
+    _id: new ObjectId(id),
+    'verification.code': code,
+    'verification.exp': { $gt: new Date() }
+  })
 
   if (!user) throw new EntityError([{ field: 'unknown', message: 'Invalid or expired verification code.' }])
 
   const unsetFields = ['verification']
   const setFields = { isActive: true, updatedAt: new Date() }
 
-  await authModel.updateDocumentFields({ _id: new ObjectId(id) }, setFields, unsetFields)
+  await accountModel.updateAccount({ _id: new ObjectId(id) }, setFields, unsetFields)
 
   return new ApiResponse(true, 'Account verified successfully.')
 }
@@ -133,12 +100,9 @@ const verifyAccount = async (req: Request) => {
 const forgotPassword = async (body: ForgotPasswordType) => {
   const { username } = body
 
-  const user = await authModel.findOne(
-    {
-      username
-    },
-    USER_COLLECTION
-  )
+  const user = await accountModel.findAccount({
+    username
+  })
 
   if (!user) throw new NotfoundError('Account not found.')
 
@@ -151,7 +115,7 @@ const forgotPassword = async (body: ForgotPasswordType) => {
   const resetTokenExp = Date.now() + 10 * 60 * 1000
   const reset = { token: resetToken, exp: new Date(resetTokenExp) }
 
-  await authModel.updateDocumentFields({ username }, { reset })
+  await accountModel.updateAccount({ username }, { reset })
 
   return new ApiResponse(true, 'Password reset link sent to your email.')
 }
@@ -160,13 +124,10 @@ const resetPassword = async (req: Request) => {
   const { token } = req.params
   const { password } = req.body
 
-  const user = await authModel.findOne(
-    {
-      'reset.token': token,
-      'reset.exp': { $gt: new Date() }
-    },
-    USER_COLLECTION
-  )
+  const user = await accountModel.findAccount({
+    'reset.token': token,
+    'reset.exp': { $gt: new Date() }
+  })
 
   if (!user) throw new EntityError([{ field: 'unknown', message: 'Invalid or expired reset token.' }])
 
@@ -175,7 +136,7 @@ const resetPassword = async (req: Request) => {
   const setFields = { password: hashedPassword, updatedAt: new Date() }
   const unsetFields = ['reset']
 
-  await authModel.updateDocumentFields({ _id: user._id }, setFields, unsetFields)
+  await accountModel.updateAccount({ _id: user._id }, setFields, unsetFields)
 
   return new ApiResponse(true, 'Password reset successfully.')
 }

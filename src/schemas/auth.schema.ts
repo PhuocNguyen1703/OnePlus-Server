@@ -4,6 +4,7 @@ import { userRoleEnum } from '~/schemas/account.schema'
 export const registerSchema = z.strictObject({
   username: z.string().min(8).trim(),
   password: z.string().min(8).max(20).trim(),
+  email: z.email().trim().optional(),
   role: userRoleEnum
 })
 
