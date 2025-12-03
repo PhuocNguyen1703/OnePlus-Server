@@ -4,6 +4,10 @@ export const findOne = async <T>(collection: string, filter: Partial<T>, option?
   return getDB().collection(collection).findOne(filter, option)
 }
 
+export const findAll = async (collection: string, option?: { [key: string]: unknown }) => {
+  return getDB().collection(collection).find({}, option).toArray()
+}
+
 export const insertOne = async <T>(collection: string, data: Partial<T>, option?: { [key: string]: unknown }) => {
   return getDB().collection(collection).insertOne(data, option)
 }
@@ -12,7 +16,7 @@ export const updateDocumentFields = async <T>(
   collection: string,
   filterQuery: Partial<T>,
   setFields?: Partial<T>,
-  unsetFields: string[] = []
+  unsetFields: string[] = [],
 ) => {
   const updateOperations: Record<string, unknown> = {}
 

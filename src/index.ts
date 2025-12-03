@@ -1,7 +1,8 @@
 import express from 'express'
 import { connectDB } from './config/mongodb'
 import envConfig from './config/envConfig'
-import authRoute from '~/routers/auth/auth.route'
+import authRoute from '~/routers/auth.route'
+import categoryRoute from '~/routers/category.route'
 import cors from 'cors'
 import cookieParser from 'cookie-parser'
 import { connectRedisClient } from './config/redis'
@@ -24,14 +25,15 @@ const startServer = () => {
   app.use(
     cors({
       origin: envConfig.CLIENT_URL,
-      credentials: true
-    })
+      credentials: true,
+    }),
   )
   app.use(express.json())
   app.use(cookieParser())
   app.use(express.urlencoded({ extended: true }))
 
   app.use('/api/v1/auth', authRoute)
+  app.use('/api/v1/categories', categoryRoute)
 
   app.use(errorHandler)
 

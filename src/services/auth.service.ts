@@ -59,14 +59,14 @@ const login = async (body: LoginType) => {
 
     const tokenPayload: IPayload = {
       _id: _id.toString(),
-      role
+      role,
     }
 
     const accessToken = await generateToken(tokenPayload, envConfig.ACCESS_TOKEN_SECRET_KEY, envConfig.ACCESS_TOKEN_EXP)
     const refreshToken = await generateToken(
       tokenPayload,
       envConfig.REFRESH_TOKEN_SECRET_KEY,
-      envConfig.REFRESH_TOKEN_EXP
+      envConfig.REFRESH_TOKEN_EXP,
     )
 
     // await redisService.setRefreshToken(_id.toString(), refreshToken, 10 * 60 * 1000)
@@ -84,7 +84,7 @@ const verifyAccount = async (req: Request) => {
   const user = await accountModel.findAccount({
     _id: new ObjectId(id),
     'verification.code': code,
-    'verification.exp': { $gt: new Date() }
+    'verification.exp': { $gt: new Date() },
   })
 
   if (!user) throw new EntityError([{ field: 'unknown', message: 'Invalid or expired verification code.' }])
@@ -101,7 +101,7 @@ const forgotPassword = async (body: ForgotPasswordType) => {
   const { username } = body
 
   const user = await accountModel.findAccount({
-    username
+    username,
   })
 
   if (!user) throw new NotfoundError('Account not found.')
@@ -126,7 +126,7 @@ const resetPassword = async (req: Request) => {
 
   const user = await accountModel.findAccount({
     'reset.token': token,
-    'reset.exp': { $gt: new Date() }
+    'reset.exp': { $gt: new Date() },
   })
 
   if (!user) throw new EntityError([{ field: 'unknown', message: 'Invalid or expired reset token.' }])
@@ -153,18 +153,18 @@ const refreshToken = async (refreshToken: string) => {
 
   const tokenPayload: IPayload = {
     _id: decodedToken._id,
-    role: decodedToken.role
+    role: decodedToken.role,
   }
 
   const newAccessToken = await generateToken(
     tokenPayload,
     envConfig.ACCESS_TOKEN_SECRET_KEY,
-    envConfig.ACCESS_TOKEN_EXP
+    envConfig.ACCESS_TOKEN_EXP,
   )
   const newRefreshToken = await generateToken(
     tokenPayload,
     envConfig.REFRESH_TOKEN_SECRET_KEY,
-    envConfig.REFRESH_TOKEN_EXP
+    envConfig.REFRESH_TOKEN_EXP,
   )
 
   return new ApiResponse(true, 'Refresh token successfully.', { newAccessToken, newRefreshToken })

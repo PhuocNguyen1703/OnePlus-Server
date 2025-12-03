@@ -3,22 +3,22 @@ import { authController } from '~/controllers/auth.controller'
 import { validateData } from '~/middlewares/validation'
 import { authMiddleware } from '~/middlewares/verifyToken'
 import {
-  forgotPasswordSchema,
-  loginSchema,
+  ForgotPasswordSchema,
+  LoginSchema,
   OTPSchema,
-  registerSchema,
-  resetPasswordSchema
+  RegisterSchema,
+  ResetPasswordSchema,
 } from '~/schemas/auth.schema'
 
 const router = express.Router()
 
-router.post('/register', validateData(registerSchema), authController.register)
-router.post('/login', validateData(loginSchema), authController.login)
+router.post('/register', validateData(RegisterSchema), authController.register)
+router.post('/login', validateData(LoginSchema), authController.login)
 router.post('/logout', authMiddleware.verifyTokenCookie, authController.logout)
 router.post('/refresh-token', authController.refreshToken)
 
 router.post('/verify-account/:id', validateData(OTPSchema), authController.verifyAccount)
-router.post('/forgot-password', validateData(forgotPasswordSchema), authController.forgotPassword)
-router.post('/reset-password/:token', validateData(resetPasswordSchema), authController.resetPassword)
+router.post('/forgot-password', validateData(ForgotPasswordSchema), authController.forgotPassword)
+router.post('/reset-password/:token', validateData(ResetPasswordSchema), authController.resetPassword)
 
 export default router

@@ -1,15 +1,13 @@
 import { ZodError } from 'zod'
-import { accountSchema, AccountType } from '~/schemas/account.schema'
+import { AccountSchema, AccountType } from '~/schemas/account.schema'
 import { RegisterType } from '~/schemas/auth.schema'
 import { findOne, insertOne, updateDocumentFields } from '~/utils/db.helpers'
 
 const ACCOUNT_COLLECTION: string = 'accounts'
 
 const validateSchema = async (data: RegisterType) => {
-  console.log('valid')
-
   try {
-    return accountSchema.parse(data)
+    return AccountSchema.parse(data)
   } catch (error) {
     throw error as ZodError
   }
@@ -26,7 +24,7 @@ const insertAccount = async (data: AccountType) => {
 const updateAccount = async (
   filterQuery: Partial<AccountType>,
   setFields?: Partial<AccountType>,
-  unsetFields?: string[]
+  unsetFields?: string[],
 ) => {
   return updateDocumentFields<AccountType>(ACCOUNT_COLLECTION, filterQuery, setFields, unsetFields)
 }

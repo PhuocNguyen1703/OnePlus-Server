@@ -4,7 +4,7 @@ import path from 'path'
 import z from 'zod'
 
 config({
-  path: '.env'
+  path: '.env',
 })
 
 const checkEnvFile = async () => {
@@ -17,7 +17,7 @@ checkEnvFile()
 
 const configSchema = z.object({
   NODE_ENV: z.string(),
-  PORT: z.coerce.number().prefault(5000),
+  PORT: z.coerce.number().default(5000),
   CLIENT_URL: z.string(),
   MONGO_DB: z.string(),
   REDIS_PW: z.string(),
@@ -26,7 +26,7 @@ const configSchema = z.object({
   ACCESS_TOKEN_EXP: z.string(),
   REFRESH_TOKEN_EXP: z.string(),
   RESEND_API_KEY: z.string(),
-  LOGO_URL: z.string()
+  LOGO_URL: z.string(),
 })
 
 const configServer = configSchema.safeParse(process.env)

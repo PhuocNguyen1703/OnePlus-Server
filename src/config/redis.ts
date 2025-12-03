@@ -5,9 +5,9 @@ const redisClient: RedisClientType = createClient({
   username: 'default',
   password: envConfig.REDIS_PW,
   socket: {
-    host: 'redis-10178.c1.ap-southeast-1-1.ec2.redns.redis-cloud.com',
-    port: 10178
-  }
+    host: 'redis-19203.c295.ap-southeast-1-1.ec2.cloud.redislabs.com',
+    port: 19203,
+  },
 })
 
 redisClient.on('error', (err: Error) => console.log('Connect fail to Redis.', err))
