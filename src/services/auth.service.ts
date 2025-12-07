@@ -1,7 +1,14 @@
 import { Request } from 'express'
 import envConfig from '~/config/envConfig'
 import { comparePassword, hashPassword } from '~/utils/crypto'
-import { AuthError, EntityError, ForbiddenError, NotfoundError } from '~/utils/errors'
+import {
+  AuthError,
+  ConflictError,
+  EntityError,
+  ForbiddenError,
+  InternalServerError,
+  NotfoundError,
+} from '~/utils/errors'
 import { generateToken, IPayload } from '~/utils/generateToken'
 import crypto from 'crypto'
 import { ObjectId } from 'mongodb'
@@ -16,17 +23,16 @@ import { AccountType } from '~/schemas/account.schema'
 const register = async (body: RegisterType) => {
   const { username, password } = body
   const hashedPassword = hashPassword(password)
-  const transformData = { ...body, password: hashedPassword, createdAt: new Date() }
+  const newAccountData = { ...body, password: hashedPassword, createdAt: new Date() }
 
-  const existUser = await accountModel.findAccount({ username })
-  if (existUser) throw new EntityError([{ field: 'username', message: 'Account already exists.' }])
-  const validatedData = await accountModel.validateSchema(transformData)
+  const existingUser = await accountModel.findAccount({ username })
+  if (existingUser) throw new ConflictError('Account already exists.')
 
-  if (!validatedData) throw new EntityError([{ field: 'validate model', message: 'Validated data is invalid.' }])
+  const validatedData = accountModel.validateSchema(newAccountData)
 
-  const newUser = await accountModel.insertAccount(validatedData as AccountType)
+  const insertResult = await accountModel.insertAccount(validatedData as AccountType)
 
-  if (!newUser) throw new Error('Database insert failed')
+  if (!insertResult.acknowledged || !insertResult.insertedId) throw new InternalServerError('Database insert failed')
 
   return new ApiResponse(true, 'Account register successfully.')
 }
@@ -47,11 +53,11 @@ const login = async (body: LoginType) => {
     const { _id, role, isActive } = user
 
     if (!isActive) {
-      const code = Math.floor(100000 + Math.random() * 900000).toString()
-      const codeExp = Date.now() + 10 * 60 * 1000
-      const verification = { code, exp: new Date(codeExp) }
+      const verificationCode = Math.floor(100000 + Math.random() * 900000).toString()
+      const verificationExp = new Date(Date.now() + 10 * 60 * 1000)
+      const verificationData = { code: verificationCode, exp: verificationExp }
 
-      await accountModel.updateAccount({ _id }, { verification })
+      await accountModel.updateAccount({ _id }, { verification: verificationData })
       // await sendVerificationEmail(email, verification_code)
 
       return new ApiResponse(true, 'Account is not verified.', { _id })
@@ -87,12 +93,12 @@ const verifyAccount = async (req: Request) => {
     'verification.exp': { $gt: new Date() },
   })
 
-  if (!user) throw new EntityError([{ field: 'unknown', message: 'Invalid or expired verification code.' }])
+  if (!user) throw new AuthError('Invalid or expired verification code.')
 
   const unsetFields = ['verification']
-  const setFields = { isActive: true, updatedAt: new Date() }
+  const updateData = { isActive: true, updatedAt: new Date() }
 
-  await accountModel.updateAccount({ _id: new ObjectId(id) }, setFields, unsetFields)
+  await accountModel.updateAccount({ _id: new ObjectId(id) }, updateData, unsetFields)
 
   return new ApiResponse(true, 'Account verified successfully.')
 }
@@ -112,10 +118,10 @@ const forgotPassword = async (body: ForgotPasswordType) => {
 
   // await sendResetPasswordEmail(user.email, resetToken)
 
-  const resetTokenExp = Date.now() + 10 * 60 * 1000
-  const reset = { token: resetToken, exp: new Date(resetTokenExp) }
+  const resetTokenExp = new Date(Date.now() + 10 * 60 * 1000)
+  const resetData = { token: resetToken, exp: resetTokenExp }
 
-  await accountModel.updateAccount({ username }, { reset })
+  await accountModel.updateAccount({ username }, { reset: resetData })
 
   return new ApiResponse(true, 'Password reset link sent to your email.')
 }
@@ -129,14 +135,14 @@ const resetPassword = async (req: Request) => {
     'reset.exp': { $gt: new Date() },
   })
 
-  if (!user) throw new EntityError([{ field: 'unknown', message: 'Invalid or expired reset token.' }])
+  if (!user) throw new AuthError('Invalid or expired reset token.')
 
   const hashedPassword = hashPassword(password)
 
-  const setFields = { password: hashedPassword, updatedAt: new Date() }
+  const updateData = { password: hashedPassword, updatedAt: new Date() }
   const unsetFields = ['reset']
 
-  await accountModel.updateAccount({ _id: user._id }, setFields, unsetFields)
+  await accountModel.updateAccount({ _id: user._id }, updateData, unsetFields)
 
   return new ApiResponse(true, 'Password reset successfully.')
 }
@@ -172,14 +178,13 @@ const refreshToken = async (refreshToken: string) => {
 
 const logout = async (req: Request) => {
   const userId = req?.userId as string
-  const refreshTokenFromCookie = req.headers?.cookie as string
+  const clientToken = req.headers?.cookie as string
 
-  const refreshTokenFromRedis = await redisService.getRefreshToken(userId)
-  console.log('redis:::::', refreshTokenFromRedis)
+  const serverToken = await redisService.getRefreshToken(userId)
+  console.log('redis:::::', serverToken)
   console.log('cookie:::::', req.headers.cookie)
 
-  if (refreshTokenFromCookie != refreshTokenFromRedis)
-    throw new ForbiddenError('You are not authorized to perform this action.')
+  if (clientToken != serverToken) throw new ForbiddenError('You are not authorized to perform this action.')
 
   await redisService.deleteRefreshToken(userId)
 

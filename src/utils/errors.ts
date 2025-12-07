@@ -16,6 +16,27 @@ export class NotfoundError extends Error {
   }
 }
 
+export class ConflictError extends Error {
+  statusCode: number = StatusCodes.CONFLICT
+  constructor(message: string) {
+    super(message)
+  }
+}
+
+export class BadRequestError extends Error {
+  statusCode: number = StatusCodes.BAD_REQUEST
+  constructor(message: string) {
+    super(message)
+  }
+}
+
+export class InternalServerError extends Error {
+  statusCode: number = StatusCodes.INTERNAL_SERVER_ERROR
+  constructor(message: string) {
+    super(message)
+  }
+}
+
 export class AuthError extends Error {
   statusCode: number = StatusCodes.UNAUTHORIZED
   constructor(message: string) {

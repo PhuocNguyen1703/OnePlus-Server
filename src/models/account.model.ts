@@ -3,9 +3,9 @@ import { AccountSchema, AccountType } from '~/schemas/account.schema'
 import { RegisterType } from '~/schemas/auth.schema'
 import { findOne, insertOne, updateDocumentFields } from '~/utils/db.helpers'
 
-const ACCOUNT_COLLECTION: string = 'accounts'
+const COLLECTION: string = 'accounts'
 
-const validateSchema = async (data: RegisterType) => {
+const validateSchema = (data: RegisterType) => {
   try {
     return AccountSchema.parse(data)
   } catch (error) {
@@ -14,11 +14,11 @@ const validateSchema = async (data: RegisterType) => {
 }
 
 const findAccount = async (filter: Record<string, unknown>) => {
-  return findOne<AccountType>(ACCOUNT_COLLECTION, filter)
+  return findOne<AccountType>(COLLECTION, filter)
 }
 
 const insertAccount = async (data: AccountType) => {
-  return insertOne<AccountType>(ACCOUNT_COLLECTION, data)
+  return insertOne<AccountType>(COLLECTION, data)
 }
 
 const updateAccount = async (
@@ -26,7 +26,7 @@ const updateAccount = async (
   setFields?: Partial<AccountType>,
   unsetFields?: string[],
 ) => {
-  return updateDocumentFields<AccountType>(ACCOUNT_COLLECTION, filterQuery, setFields, unsetFields)
+  return updateDocumentFields<AccountType>(COLLECTION, filterQuery, setFields, unsetFields)
 }
 
 export const accountModel = { validateSchema, findAccount, insertAccount, updateAccount }

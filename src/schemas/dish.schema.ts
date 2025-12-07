@@ -1,7 +1,7 @@
 import z from 'zod'
 import { BaseMongoSchema, I18nStringSchema, ObjectIdSchema } from './common.schema'
 
-export const MenuItemSchema = BaseMongoSchema.extend({
+export const DishSchema = BaseMongoSchema.extend({
   sku: z.string().min(1),
   category_id: ObjectIdSchema,
 
@@ -32,7 +32,6 @@ export const MenuItemSchema = BaseMongoSchema.extend({
     .optional(),
 
   is_out_of_stock: z.boolean().default(false),
-  station_id: ObjectIdSchema.optional(),
 }).strict()
 
-export type MenuItem = z.infer<typeof MenuItemSchema>
+export type DishType = z.infer<typeof DishSchema>
