@@ -8,7 +8,7 @@ export const TableSchema = BaseMongoSchema.extend({
   section_name: I18nStringSchema, // area or section of the restaurant
   capacity: z.number().int().positive(),
   status: TableStatusEnum.default('available'),
-  current_order_id: ObjectIdSchema.nullable().default(null).optional(),
+  order_id: ObjectIdSchema.nullable().default(null).optional(),
 }).strict()
 
 export type TableType = z.infer<typeof TableSchema>

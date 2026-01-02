@@ -8,7 +8,7 @@ export const DishSchema = BaseMongoSchema.extend({
   name: I18nStringSchema,
   description: I18nStringSchema.optional(),
 
-  price: z.number().min(0),
+  price: z.number().nonnegative(),
   image_urls: z.array(z.url()).optional(),
 
   tags: z.array(I18nStringSchema).optional(),
@@ -32,6 +32,7 @@ export const DishSchema = BaseMongoSchema.extend({
     .optional(),
 
   is_out_of_stock: z.boolean().default(false),
+  status: z.enum(['active', 'inactive']).default('active'),
 }).strict()
 
 export type DishType = z.infer<typeof DishSchema>

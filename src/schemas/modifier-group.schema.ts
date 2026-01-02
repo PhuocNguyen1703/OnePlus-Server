@@ -5,7 +5,7 @@ const ModifierOptionSchema = z
   .object({
     _id: ObjectIdSchema.optional(),
     name: I18nStringSchema,
-    price_adjustment: z.number().min(0).default(0),
+    price: z.number().nonnegative().default(0),
     is_default: z.boolean().default(false),
     status: z.enum(['active', 'out_of_stock']).default('active'),
   })
